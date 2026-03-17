@@ -3,9 +3,9 @@
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 
+#include "dolphin/PPCArch.h"
 #include "dolphin/ai.h"
 #include "dolphin/dsp.h"
-#include "dolphin/PPCArch.h"
 #include "musyx/assert.h"
 #include "musyx/dsp_import.h"
 #include "musyx/hardware.h"
@@ -14,6 +14,19 @@
 static DSPTaskInfo dsp_task ATTRIBUTE_ALIGN(8);
 static u16 dram_image[4096] ATTRIBUTE_ALIGN(32);
 
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 3) //
+static SND_SOME_CALLBACK userCallback;
+u8 salAIBufferIndex;
+static void *salAIBufferBase;
+static volatile u32 salDspIsDone;
+static volatile u32 salLogicIsWaiting;
+static volatile u32 salLogicActive;
+static volatile OSTick salLastTick;
+static volatile u32 salDspInitIsDone;
+static OSThreadQueue salWaitForDSPThreadQueue;
+static volatile u16 hwIrqLevel;
+static volatile u32 oldState;
+#else
 static volatile u32 oldState = 0;
 static volatile u16 hwIrqLevel = 0;
 static volatile u32 salDspInitIsDone = 0;
@@ -21,9 +34,12 @@ static volatile OSTick salLastTick = 0;
 static volatile u32 salLogicActive = 0;
 static volatile u32 salLogicIsWaiting = 0;
 static volatile u32 salDspIsDone = 0;
-static void* salAIBufferBase = NULL;
+static void *salAIBufferBase = NULL;
 u8 salAIBufferIndex = 0;
 static SND_SOME_CALLBACK userCallback = NULL;
+u8 *aramBase;
+u32 aramSize;
+#endif
 
 #define DMA_BUFFER_LEN 0x280
 
@@ -35,10 +51,10 @@ static inline void callUserCallback() {
   }
   salLogicActive = 1;
   OSEnableInterrupts();
-  
+
   userCallback();
   OSDisableInterrupts();
-  
+
   salLogicActive = 0;
 }
 
@@ -47,14 +63,13 @@ static void salCallback() {
   AIInitDMA(OSCachedToPhysical(salAIBufferBase) + (salAIBufferIndex * DMA_BUFFER_LEN),
             DMA_BUFFER_LEN);
   salLastTick = OSGetTick();
-  
+
   if (salDspIsDone) {
     callUserCallback();
   } else {
     salLogicIsWaiting = 1;
   }
 }
-
 
 static void dspInitCallback() {
   salDspIsDone = TRUE;
@@ -79,7 +94,7 @@ static void dspDoneCallback() { OSWakeupThread(&salWaitForDSPThreadQueue); }
 #define SAL_MALLOC salMallocPhysical
 #endif
 
-u32 salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32* outFreq) {
+u32 salInitAi(SND_SOME_CALLBACK callback, u32 unk, u32 *outFreq) {
   if ((salAIBufferBase = SAL_MALLOC(DMA_BUFFER_LEN * 4)) != NULL) {
     memset(salAIBufferBase, 0, DMA_BUFFER_LEN * 4);
     DCFlushRange(salAIBufferBase, DMA_BUFFER_LEN * 4);
@@ -108,18 +123,18 @@ u32 salExitAi() {
   return TRUE;
 }
 
-void* salAiGetDest() {
+void *salAiGetDest() {
   u8 index; // r31
   index = (salAIBufferIndex + 2) % 4;
-  return (void*)((u8*)salAIBufferBase + index * DMA_BUFFER_LEN);
+  return (void *)((u8 *)salAIBufferBase + index * DMA_BUFFER_LEN);
 }
 
 u32 salInitDsp() {
   u8 _[8];
-  dsp_task.iram_mmem_addr = (u16*)dspSlave;
+  dsp_task.iram_mmem_addr = (u16 *)dspSlave;
   dsp_task.iram_length = dspSlaveLength;
   dsp_task.iram_addr = 0;
-  dsp_task.dram_mmem_addr = (u16*)dram_image;
+  dsp_task.dram_mmem_addr = (u16 *)dram_image;
   dsp_task.dram_length = 0x2000;
   dsp_task.dram_addr = 0;
   dsp_task.dsp_init_vector = 0x10;
@@ -162,7 +177,7 @@ u32 salExitDsp() {
   return TRUE;
 }
 
-static void salStartDsp(u16* cmdList) {
+static void salStartDsp(u16 *cmdList) {
   salDspIsDone = FALSE;
   PPCSync();
   /* clang-format off */
@@ -177,7 +192,7 @@ static void salStartDsp(u16* cmdList) {
     ;
 }
 
-void salCtrlDsp(s16* dest) {
+void salCtrlDsp(s16 *dest) {
   salBuildCommandList(dest, salGetStartDelay());
   salStartDsp(dspCmdList);
 }
@@ -207,6 +222,8 @@ void hwIRQEnterCritical() { OSDisableInterrupts(); }
 
 void hwIRQLeaveCritical() { OSEnableInterrupts(); }
 
+#if MUSY_VERSION != MUSY_VERSION_CHECK(2, 0, 3) //
 u32 aramSize = 0;
-u8* aramBase = NULL;
+u8 *aramBase = NULL;
+#endif
 #endif

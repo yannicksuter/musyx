@@ -35,7 +35,7 @@ void streamInit() {
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 3)
-static void SetHWMix(const STREAM_INFO* si) {
+static void SetHWMix(const STREAM_INFO *si) {
   hwSetVolume(si->voice, 0, si->vol * (1 / 127.f), (si->pan << 16), (si->span << 16),
               si->auxa * (1 / 127.f), si->auxb * (1 / 127.f));
 }
@@ -46,7 +46,7 @@ void streamHandle() {
   u32 cpos;           // r30
   u32 len;            // r29
   SAMPLE_INFO newsmp; // r1+0x8
-  STREAM_INFO* si;    // r31
+  STREAM_INFO *si;    // r31
   float f;            // f31
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
   u32 v;
@@ -69,7 +69,7 @@ void streamHandle() {
       newsmp.loopLength = si->size;
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4)
-      si->adpcmInfo.loopPS = si->adpcmInfo.initialPS = *(u8*)si->buffer;
+      si->adpcmInfo.loopPS = si->adpcmInfo.initialPS = *(u8 *)si->buffer;
 #endif
 
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(1, 5, 4) && MUSY_TARGET == MUSY_TARGET_DOLPHIN
@@ -148,7 +148,7 @@ void streamHandle() {
           } break;
           case 1: {
             u32 off = (si->last / 14) * 8;
-            if ((len = si->updateFunction((void*)((size_t)si->buffer + off), cpos - si->last, NULL,
+            if ((len = si->updateFunction((void *)((size_t)si->buffer + off), cpos - si->last, NULL,
                                           0, si->user)) != 0 &&
                 si->state == 2) {
               cpos = (si->last + len) % si->size;
@@ -186,7 +186,7 @@ void streamHandle() {
             break;
           case 1: {
             u32 off = ((si->last / 14) * 8);
-            if ((len = si->updateFunction((void*)((size_t)si->buffer + off), si->size - si->last,
+            if ((len = si->updateFunction((void *)((size_t)si->buffer + off), si->size - si->last,
                                           NULL, 0, si->user)) &&
                 si->state == 2) {
               cpos = (si->last + len) % si->size;
@@ -230,7 +230,7 @@ void streamHandle() {
             break;
           case 1: {
             u32 off = (si->last / 14) * 8;
-            if ((len = si->updateFunction((void*)((size_t)si->buffer + off), si->size - si->last,
+            if ((len = si->updateFunction((void *)((size_t)si->buffer + off), si->size - si->last,
                                           si->buffer, cpos, si->user)) &&
                 si->state == 2) {
               cpos = (si->last + len) % si->size;
@@ -257,16 +257,16 @@ void streamHandle() {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
           hwSetStreamLoopPS(si->voice,
-                            (si->lastPSFromBuffer = *(u32*)OSCachedToUncached(si->buffer) >> 24));
+                            (si->lastPSFromBuffer = *(u32 *)OSCachedToUncached(si->buffer) >> 24));
 #elif MUSY_TARGET == MUSY_TARGET_PC
-          hwSetStreamLoopPS(si->voice, (si->lastPSFromBuffer = *(u32*)si->buffer >> 24));
+          hwSetStreamLoopPS(si->voice, (si->lastPSFromBuffer = *(u32 *)si->buffer >> 24));
 #endif
 #else
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 
-          hwSetStreamLoopPS(si->voice, *(u32*)OSCachedToUncached(si->buffer) >> 24);
+          hwSetStreamLoopPS(si->voice, *(u32 *)OSCachedToUncached(si->buffer) >> 24);
 #elif MUSY_TARGET == MUSY_TARGET_PC
-          hwSetStreamLoopPS(si->voice, *(u32*)si->buffer >> 24);
+          hwSetStreamLoopPS(si->voice, *(u32 *)si->buffer >> 24);
 #endif
 #endif
         }
@@ -279,7 +279,7 @@ void streamHandle() {
 void streamCorrectLoops() {}
 
 void streamKill(u32 voice) {
-  STREAM_INFO* si;
+  STREAM_INFO *si;
 #if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
   si = &streamInfo[voice];
   switch (si->state) {
@@ -293,6 +293,26 @@ void streamKill(u32 voice) {
     break;
   default:
     break;
+  }
+#elif MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
+  u32 i;
+  u8 state;
+  u32 streamVoice;
+
+  for (i = 0; i < 64; ++i) {
+    si = &streamInfo[i];
+    state = si->state;
+    if (state == 1 || state == 2) {
+      streamVoice = si->voice;
+      if (streamVoice == voice) {
+        if (state == 2) {
+          voiceUnblock(streamVoice); // TODO fix in release
+        }
+        si->state = 3;
+        si->updateFunction(0, 0, 0, 0, si->user);
+        break;
+      }
+    }
   }
 #else
   u32 i;
@@ -349,7 +369,7 @@ u32 sndStreamCallbackFrq(u32 msTime) {
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-u32 sndStreamGetARAMAddress(u32 stid, u32* aramAddr) {
+u32 sndStreamGetARAMAddress(u32 stid, u32 *aramAddr) {
   u32 i;
   u32 ret = 0;
 
@@ -431,7 +451,7 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 0)
     if (streamInfo[i].type == 1) {
       streamInfo[i].lastPSFromBuffer =
-          (*(u32*)MUSY_CACHED_TO_UNCACHED_ADDR(streamInfo[i].buffer)) >> 24;
+          (*(u32 *)MUSY_CACHED_TO_UNCACHED_ADDR(streamInfo[i].buffer)) >> 24;
       if (streamInfo[i].voice != -1) {
         hwSetStreamLoopPS(streamInfo[i].voice, streamInfo[i].lastPSFromBuffer);
       }
@@ -444,7 +464,7 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
 #else
     if (streamInfo[i].type == 1) {
       hwSetStreamLoopPS(streamInfo[i].voice,
-                        *(u32*)MUSY_CACHED_TO_UNCACHED_ADDR(streamInfo[i].buffer) >> 24);
+                        *(u32 *)MUSY_CACHED_TO_UNCACHED_ADDR(streamInfo[i].buffer) >> 24);
     }
 #endif
   } else {
@@ -453,7 +473,7 @@ void sndStreamARAMUpdate(u32 stid, u32 off1, u32 len1, u32 off2, u32 len2) {
   hwEnableIrq();
 }
 
-static void CheckOutputMode(u8* pan, u8* span) {
+static void CheckOutputMode(u8 *pan, u8 *span) {
   if (synthFlags & 1) {
     *pan = 64;
     *span = 0;
@@ -463,7 +483,7 @@ static void CheckOutputMode(u8* pan, u8* span) {
 }
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-static void SetupVolume(STREAM_INFO* si, u8 vol, u8 auxa, u8 auxb) {
+static void SetupVolume(STREAM_INFO *si, u8 vol, u8 auxa, u8 auxb) {
   si->vol = vol;
   si->auxa = auxa;
   si->auxb = auxb;
@@ -471,7 +491,7 @@ static void SetupVolume(STREAM_INFO* si, u8 vol, u8 auxa, u8 auxb) {
 #endif
 
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(1, 5, 4)
-static void SetupVolumeAndPan(STREAM_INFO* si, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb) {
+static void SetupVolumeAndPan(STREAM_INFO *si, u8 vol, u8 pan, u8 span, u8 auxa, u8 auxb) {
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   SetupVolume(si, vol, auxa, auxb);
 #endif
@@ -511,11 +531,11 @@ void streamOutputModeChanged() {
 }
 #endif
 
-SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vol, u8 pan, u8 span,
+SND_STREAMID sndStreamAllocEx(u8 prio, void *buffer, u32 samples, u32 frq, u8 vol, u8 pan, u8 span,
                               u8 auxa, u8 auxb, u8 studio, u32 flags,
-                              u32 (*updateFunction)(void* buffer1, u32 len1, void* buffer2,
+                              u32 (*updateFunction)(void *buffer1, u32 len1, void *buffer2,
                                                     u32 len2, u32 user),
-                              u32 user, SND_ADPCMSTREAM_INFO* adpcmInfo) {
+                              u32 user, SND_ADPCMSTREAM_INFO *adpcmInfo) {
   u32 stid;  // r29
   u32 i;     // r31
   u32 bytes; // r25
@@ -534,7 +554,7 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
     streamInfo[i].stid = stid;
     streamInfo[i].flags = flags;
     bytes = sndStreamAllocLength(samples, flags);
-    streamInfo[i].buffer = (s16*)buffer;
+    streamInfo[i].buffer = (s16 *)buffer;
     streamInfo[i].size = samples;
     streamInfo[i].bytes = bytes;
     streamInfo[i].updateFunction = updateFunction;
@@ -596,10 +616,10 @@ SND_STREAMID sndStreamAllocEx(u8 prio, void* buffer, u32 samples, u32 frq, u8 vo
   return stid;
 }
 
-u32 sndStreamAllocStereo(u8 prio, void* lBuffer, void* rBuffer, u32 samples, u32 frq, u8 vol,
+u32 sndStreamAllocStereo(u8 prio, void *lBuffer, void *rBuffer, u32 samples, u32 frq, u8 vol,
                          u8 pan, u8 span, u8 auxa, u8 auxb, u8 studio, u32 flags,
                          SND_STREAM_UPDATE_CALLBACK updateFunction, u32 lUser, u32 rUser,
-                         SND_ADPCMSTREAM_INFO* adpcmInfoL, SND_ADPCMSTREAM_INFO* adpcmInfoR) {
+                         SND_ADPCMSTREAM_INFO *adpcmInfoL, SND_ADPCMSTREAM_INFO *adpcmInfoR) {
   u32 stid[2]; // r1+0x38
   s16 rPan;    // r31
   s16 lPan;    // r30
@@ -636,7 +656,7 @@ u32 sndStreamAllocLength(u32 num, u32 flags) {
   return (num * 2 + 31) & ~31;
 }
 
-void sndStreamADPCMParameter(u32 stid, SND_ADPCMSTREAM_INFO* adpcmInfo) {
+void sndStreamADPCMParameter(u32 stid, SND_ADPCMSTREAM_INFO *adpcmInfo) {
   u32 j; // r31
   u32 i; // r30
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
@@ -800,6 +820,7 @@ void sndStreamLPFParameter(u32 stid, u32 enable, u32 frq) {
   hwEnableIrq();
 }
 
+#if MUSY_VERSION != MUSY_VERSION_CHECK(2, 0, 3)
 void sndStreamLPFDefaultParameter(u32 enable, u32 frq) {
   MUSY_ASSERT_MSG(sndActive, "Sound system is not initialized.");
   hwDisableIrq();
@@ -807,6 +828,7 @@ void sndStreamLPFDefaultParameter(u32 enable, u32 frq) {
   streamDefaults.lpfFrq = frq;
   hwEnableIrq();
 }
+#endif
 #endif
 
 void sndStreamFree(SND_STREAMID stid) {
