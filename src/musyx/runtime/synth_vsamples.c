@@ -68,23 +68,27 @@ u32 vsSampleStartNotify(
 #endif
 ) {
   u8 sb;
-  u8 i;
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
-  u8 voice = voiceID;
+  u32 voiceByte = voiceID & 0xFF;
+  u8 voice = voiceByte;
+  u8 hwVoice;
 #endif
+  u8 i;
   size_t addr;
 
   for (i = 0; i < vs.numBuffers; ++i) {
-    if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voice) {
+    if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voiceByte) {
       vsFreeBuffer(i);
     }
   }
 
-  sb = vs.voices[voice] = vsAllocateBuffer();
+  sb = vsAllocateBuffer();
+  hwVoice = voice;
+  vs.voices[hwVoice] = sb;
   if (sb != 0xFF) {
-    addr = aramGetStreamBufferAddress(vs.voices[voice], 0);
-    hwSetVirtualSampleLoopBuffer(voice, (void*)addr, vs.bufferLength);
-    vs.streamBuffer[sb].info.smpID = hwGetSampleID(voice);
+    addr = aramGetStreamBufferAddress(vs.voices[hwVoice], 0);
+    hwSetVirtualSampleLoopBuffer(hwVoice, (void*)addr, vs.bufferLength);
+    vs.streamBuffer[sb].info.smpID = hwGetSampleID(hwVoice);
     vs.streamBuffer[sb].info.instID = vsNewInstanceID();
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     if ((vs.streamBuffer[sb].info.vid = vidGetPublicId(voiceID)) != -1) {
@@ -92,9 +96,9 @@ u32 vsSampleStartNotify(
     } else {
       vs.streamBuffer[sb].info.seqID = -1;
     }
-    vs.streamBuffer[sb].info.data.start.extraData = hwGetSampleExtraData(voice);
+    vs.streamBuffer[sb].info.data.start.extraData = hwGetSampleExtraData(hwVoice);
 #endif
-    vs.streamBuffer[sb].smpType = hwGetSampleType(voice);
+    vs.streamBuffer[sb].smpType = hwGetSampleType(hwVoice);
     vs.streamBuffer[sb].voice = voice;
     if (vs.callback != NULL && (MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 1)
                                     ? TRUE
@@ -104,12 +108,12 @@ u32 vsSampleStartNotify(
 #endif
       return (vs.streamBuffer[sb].info.instID << 8) | voice;
     }
-    hwSetVirtualSampleLoopBuffer(voice, 0, 0);
+    hwSetVirtualSampleLoopBuffer(hwVoice, 0, 0);
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     vsFreeBuffer(sb);
 #endif
   } else {
-    hwSetVirtualSampleLoopBuffer(voice, 0, 0);
+    hwSetVirtualSampleLoopBuffer(hwVoice, 0, 0);
   }
 
   return 0xFFFFFFFF;
