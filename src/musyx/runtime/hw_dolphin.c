@@ -3,9 +3,9 @@
 
 #if MUSY_TARGET == MUSY_TARGET_DOLPHIN
 
-#include "dolphin/PPCArch.h"
 #include "dolphin/ai.h"
 #include "dolphin/dsp.h"
+#include "dolphin/PPCArch.h"
 #include "musyx/assert.h"
 #include "musyx/dsp_import.h"
 #include "musyx/hardware.h"
@@ -14,7 +14,7 @@
 static DSPTaskInfo dsp_task ATTRIBUTE_ALIGN(8);
 static u16 dram_image[4096] ATTRIBUTE_ALIGN(32);
 
-#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 3) //
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
 static SND_SOME_CALLBACK userCallback;
 u8 salAIBufferIndex;
 static void *salAIBufferBase;
@@ -37,8 +37,6 @@ static volatile u32 salDspIsDone = 0;
 static void *salAIBufferBase = NULL;
 u8 salAIBufferIndex = 0;
 static SND_SOME_CALLBACK userCallback = NULL;
-u8 *aramBase;
-u32 aramSize;
 #endif
 
 #define DMA_BUFFER_LEN 0x280

@@ -14,10 +14,16 @@
 
 static STREAM_INFO streamInfo[64];
 static u32 nextPublicID = 0;
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
 static u8 streamCallCnt;
 static u8 streamCallDelay;
+#endif
 #if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
 static struct streamDefaults streamDefaults;
+#endif
+#if MUSY_VERSION <= MUSY_VERSION_CHECK(2, 0, 2)
+static u8 streamCallDelay = 0;
+static u8 streamCallCnt = 0;
 #endif
 
 void streamInit() {
@@ -342,7 +348,11 @@ static u32 GetPrivateIndex(u32 publicID) {
   return -1;
 }
 
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
 static inline u32 GeneratePublicID() {
+#else
+static u32 GeneratePublicID() {
+#endif
   u32 id; // r30
   u32 i;  // r31
 

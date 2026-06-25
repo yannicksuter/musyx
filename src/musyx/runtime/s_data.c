@@ -503,6 +503,7 @@ u32 seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_cal
   return 0xffffffff;
 }
 
+#if MUSY_VERSION == MUSY_VERSION_CHECK(2, 0, 3)
 inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 irq_call, u8 studio) {
   int i;
   GROUP_DATA* g;
@@ -571,6 +572,7 @@ inline u32 _seqPlaySong(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8
 #endif
   return 0xffffffff;
 }
+#endif
 
 
 u32 sndSeqPlayEx(u16 sgid, u16 sid, void* arrfile, SND_PLAYPARA* para, u8 studio) {
