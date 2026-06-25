@@ -68,7 +68,10 @@ u32 vsSampleStartNotify(
 #endif
 ) {
   u8 sb;
-#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+  u8 voice = voiceID & 0xFF;
+  u8 hwVoice;
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
   u32 voiceByte = voiceID & 0xFF;
   u8 voice = voiceByte;
   u8 hwVoice;
@@ -77,7 +80,13 @@ u32 vsSampleStartNotify(
   size_t addr;
 
   for (i = 0; i < vs.numBuffers; ++i) {
+#if MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 3)
+    if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voice) {
+#elif MUSY_VERSION >= MUSY_VERSION_CHECK(2, 0, 2)
     if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voiceByte) {
+#else
+    if (vs.streamBuffer[i].state != 0 && vs.streamBuffer[i].voice == voice) {
+#endif
       vsFreeBuffer(i);
     }
   }
